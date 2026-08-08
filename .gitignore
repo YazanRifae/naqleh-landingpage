@@ -17,3 +17,8 @@ _site/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Higgsfield job scratch: response metadata + expiring CDN URLs, not source.
+# The still PROMPTS beside them are kept — they document how each opener was made.
+video-brief*/**/*.json
+video-brief*/**/*.err

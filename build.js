@@ -26,8 +26,11 @@ const SITE = (process.env.SITE_URL || 'https://naqla.sy').replace(/\/+$/, '');
 
 // Only wire clips that actually exist, so the page never fetches a 404.
 // build-assets.sh regenerates this each time a leg lands.
-let CLIPS = {};
-try { CLIPS = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/clips.json'), 'utf8')); } catch (e) { CLIPS = {}; }
+let CLIPS = { desktop: {}, mobile: {} };
+try {
+  const raw = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/clips.json'), 'utf8'));
+  CLIPS = { desktop: raw.desktop || {}, mobile: raw.mobile || {} };
+} catch (e) { /* no clips yet -> stills only */ }
 
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -79,7 +82,14 @@ function page(langKey) {
       accent: st.accent, scroll: st.scroll, linger: st.linger,
       eyebrow: s.eyebrow, title: s.title, body: s.body,
     };
-    if (CLIPS[id]) o.clip = `${base}assets/vid/${id}.mp4`;
+    if (CLIPS.desktop[id]) o.clip = `${base}assets/vid/${id}.mp4`;
+    // Native 9:16 variants. The engine serves these on phones and falls back to the
+    // desktop clip when absent; stillMobile keeps the poster portrait so there's no
+    // landscape->portrait flash when the vertical clip paints.
+    if (CLIPS.mobile[id]) {
+      o.clipMobile = `${base}assets/vid/${id}-m.mp4`;
+      o.stillMobile = `${base}assets/img/${id}-m.webp`;
+    }
     if (s.tags) o.tags = s.tags;
     if (id === 'finale') {
       o.cta = {
@@ -142,7 +152,7 @@ function page(langKey) {
       <div class="wrap">
         ${sectionHead(c.fleetHead, 'fleet')}
         <figure class="shot reveal">
-          <img src="${base}assets/img/fleet.webp" width="1800" height="1018" loading="lazy" decoding="async"
+          <img src="${base}assets/img/fleet@1800.webp" width="1800" height="1013" loading="lazy" decoding="async"
                alt="${esc(isAr ? 'مركبات نقلة الست في ساحة الأسطول' : "Naqla's six vehicle types in the fleet yard")}">
         </figure>
         <p class="caveat reveal">${esc(c.fleetCaveat)}</p>
@@ -410,10 +420,12 @@ fs.writeFileSync(path.join(ROOT, 'index.html'), arHtml);
 fs.mkdirSync(path.join(ROOT, 'en'), { recursive: true });
 fs.writeFileSync(path.join(ROOT, 'en/index.html'), enHtml);
 
-const wired = SCENES.filter(s => CLIPS[s]);
+const wired = SCENES.filter(s => CLIPS.desktop[s]);
+const wiredM = SCENES.filter(s => CLIPS.mobile[s]);
 console.log('built index.html      %s  (ar, rtl)', String(Buffer.byteLength(arHtml) / 1024).slice(0, 5) + ' KB');
 console.log('built en/index.html   %s  (en, ltr)', String(Buffer.byteLength(enHtml) / 1024).slice(0, 5) + ' KB');
 console.log('clips wired: %d/6  [%s]', wired.length, wired.join(', ') || 'none — stills only');
+console.log('mobile 9:16 wired: %d/6 [%s]', wiredM.length, wiredM.join(', ') || 'none — phones get the landscape centre-crop');
 if (wired.length < SCENES.length) {
-  console.log('scenes still on stills: %s', SCENES.filter(s => !CLIPS[s]).join(', '));
+  console.log('scenes still on stills: %s', SCENES.filter(s => !CLIPS.desktop[s]).join(', '));
 }
