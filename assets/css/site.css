@@ -1,0 +1,550 @@
+/* ============================================================================
+   نقلة · Naqla — landing page
+   Written RTL-first: my own rules use LOGICAL properties (padding-inline,
+   inset-inline-start, text-align:start…) so Arabic and English mirror for free.
+   Physical [dir="rtl"] overrides appear only where they patch the scrub engine,
+   whose CSS is physical (left/right) by design.
+   ========================================================================== */
+
+:root {
+  /* palette — the brief's identity: deep teal, warm orange, sand beige, white */
+  --teal-900: #0B2226;
+  --teal-800: #0E3B3F;
+  --teal-700: #0E4F52;
+  --teal-600: #12676B;
+  --orange:   #E0722C;
+  --orange-d: #C25F1F;
+  --sand:     #F7F2E8;
+  --sand-2:   #EFE6D6;
+  --white:    #FFFFFF;
+
+  --ink:      #10262A;
+  --ink-soft: #5A6B6D;
+  --line:     rgba(14, 79, 82, .12);
+  --line-2:   rgba(14, 79, 82, .22);
+
+  --font: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, system-ui, sans-serif;
+
+  --r:   18px;
+  --r-s: 12px;
+  --shadow:   0 1px 2px rgba(11, 34, 38, .04), 0 8px 24px rgba(11, 34, 38, .06);
+  --shadow-l: 0 2px 6px rgba(11, 34, 38, .06), 0 22px 48px rgba(11, 34, 38, .10);
+
+  --wrap: 1180px;
+  --gap: clamp(16px, 2vw, 26px);
+  --s-pad: clamp(56px, 8vh, 104px);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--sand);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------------------------------------------------------------------------
+   SCOPED RESET — deliberately NOT global.
+   The scrub engine ships its own CSS inside `@layer sw`, and *unlayered* rules
+   beat layered ones no matter how specific the layered one is. So a global
+   `img { height:auto }` silently defeats `.sw-scene__still { height:100% }` and
+   letterboxes every scene; `h1..h4 { color }` repaints the film headline;
+   `p/ul { margin:0 }` eats the copy's spacing. Confining the reset to our own
+   containers leaves the engine's cascade intact.
+
+   `:where()` (not `:is()`) on BOTH halves so the whole reset weighs 0,0,0.
+   With `:is(#details …)` it weighed 1,0,1 — enough to beat `.dark .s-title`
+   (0,2,0) and repaint the dark panel's heading teal-on-teal. A reset must be
+   the weakest thing in the file, not the strongest.
+   --------------------------------------------------------------------------- */
+:where(.site-head, #details, .foot) :where(h1, h2, h3, h4) {
+  margin: 0; font-weight: 700; line-height: 1.2; color: var(--teal-700);
+}
+:where(.site-head, #details, .foot) :where(p, figure) { margin: 0; }
+:where(.site-head, #details, .foot) :where(ul, ol, dl, dd) { margin: 0; padding: 0; }
+:where(.site-head, #details, .foot) :where(li) { list-style: none; }
+:where(.site-head, #details, .foot) :where(img) { max-inline-size: 100%; display: block; height: auto; }
+:where(.site-head, #details, .foot) :where(a) { color: inherit; }
+
+:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.skip {
+  position: absolute; inset-block-start: -60px; inset-inline-start: 12px; z-index: 300;
+  background: var(--teal-700); color: var(--white);
+  padding: 10px 18px; border-radius: 0 0 var(--r-s) var(--r-s);
+  text-decoration: none; font-weight: 600;
+  transition: inset-block-start .2s;
+}
+.skip:focus { inset-block-start: 0; }
+
+/* ==========================================================================
+   1. THE FILM  (scroll-world engine)
+   ========================================================================== */
+
+/* position+z-index makes .world a stacking context, so ALL the engine's
+   position:fixed chrome (sky, stage, copy, route rail, scrollbar, hint) is
+   z-contained here and the detail view below can slide cleanly over it.
+   Fixed children stay viewport-positioned — only paint order is confined. */
+.world { position: relative; z-index: 0; }
+
+/* Dark film theme. These are UNLAYERED, so they beat the engine's @layer sw
+   defaults regardless of injection order. --sw-bg also tints the copy scrim,
+   which is what keeps the headline readable over live video. */
+.sw-root {
+  --sw-bg: var(--teal-900);
+  --sw-ink: #F8F3EA;
+  --sw-ink-soft: #9DB2B4;
+  --sw-accent: var(--orange);
+  --sw-font-display: var(--font);
+  --sw-font-body: var(--font);
+}
+
+/* Arabic is cursive: letter-spacing severs the joins and looks broken.
+   The engine letter-spaces the eyebrow and the scroll hint, so undo it here
+   and re-apply only for Latin. */
+[dir="rtl"] .sw-copy__eyebrow,
+[dir="rtl"] .sw-hint { letter-spacing: 0; text-transform: none; }
+[dir="ltr"] .sw-copy__eyebrow { letter-spacing: .16em; }
+
+/* Mirror the engine's physical layout for RTL: copy + scrim to the right,
+   route rail to the left so it never sits under the text column. */
+[dir="rtl"] .sw-copy { left: auto; right: clamp(18px, 5vw, 64px); }
+[dir="rtl"] .sw-copylayer::before {
+  left: auto; right: 0;
+  background: linear-gradient(270deg, var(--sw-bg) 0%,
+    color-mix(in srgb, var(--sw-bg) 82%, transparent) 34%,
+    color-mix(in srgb, var(--sw-bg) 40%, transparent) 62%, transparent 100%);
+}
+[dir="rtl"] .sw-route { right: auto; left: clamp(14px, 2.4vw, 30px); }
+[dir="rtl"] .sw-route__label { right: auto; left: 24px; transform: translateY(-50%) translateX(-6px); }
+[dir="rtl"] .sw-route__dot:hover .sw-route__label,
+[dir="rtl"] .sw-route__dot.is-active .sw-route__label { transform: translateY(-50%) translateX(0); }
+
+/* The route rail's hover/active label is near-white by default (it assumes a
+   light page). On the dark film that put light-on-light text in an invisible
+   pill — restate it as a dark chip. */
+.sw-route__label {
+  color: #F8F3EA;
+  background: rgba(11, 34, 38, .88);
+  border-color: rgba(248, 243, 234, .22);
+}
+
+/* "01 / 06" is Latin digits inside an RTL paragraph, so bidi reorders it to read
+   "06 / 01". Isolating it as LTR keeps the pair in authored order while the
+   element itself still flows from the inline start. */
+[dir="rtl"] .sw-copy__num { direction: ltr; unicode-bidi: isolate; }
+
+/* The engine's tag pills and buttons assume a light background; restate them
+   for the dark film so they read as glass rather than mud. */
+.sw-copy__tags li {
+  color: #F8F3EA;
+  background: rgba(248, 243, 234, .10);
+  border-color: rgba(248, 243, 234, .26);
+  backdrop-filter: blur(6px);
+}
+.sw-btn--primary { background: var(--orange); color: #fff; }
+.sw-btn--ghost { color: #F8F3EA; border-color: rgba(248, 243, 234, .42); }
+.sw-copy__title { text-shadow: 0 2px 26px rgba(11, 34, 38, .55); }
+.sw-copy__body { text-shadow: 0 1px 16px rgba(11, 34, 38, .6); }
+
+@media (max-width: 860px) {
+  /* Mobile scrim is a bottom-up gradient in the engine; it's direction-neutral,
+     so only the copy inset needs mirroring. */
+  [dir="rtl"] .sw-copy { right: clamp(18px, 5vw, 64px); left: clamp(18px, 5vw, 64px); }
+  [dir="rtl"] .sw-copylayer::before { background: linear-gradient(0deg, var(--sw-bg) 8%,
+      color-mix(in srgb, var(--sw-bg) 70%, transparent) 46%, transparent 100%); }
+}
+
+/* ==========================================================================
+   2. PERSISTENT HEADER
+   ========================================================================== */
+
+.site-head {
+  position: fixed; inset-block-start: 0; inset-inline: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  padding: clamp(12px, 2vw, 20px) clamp(16px, 4vw, 48px);
+  padding-block-start: max(clamp(12px, 2vw, 20px), env(safe-area-inset-top));
+}
+.site-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.site-brand__mark {
+  inline-size: 26px; block-size: 30px; border-radius: 8px 8px 11px 11px;
+  background: linear-gradient(160deg, var(--orange), var(--orange-d));
+  box-shadow: 0 6px 16px rgba(224, 114, 44, .42);
+  position: relative; flex: none;
+}
+/* the QR-label motif that runs through the whole film */
+.site-brand__mark::after {
+  content: ""; position: absolute; inset-block-start: 7px; inset-inline-start: 7px;
+  inline-size: 12px; block-size: 12px; border-radius: 2px;
+  background:
+    linear-gradient(#fff 0 0) 0 0 / 5px 5px no-repeat,
+    linear-gradient(#fff 0 0) 100% 0 / 5px 5px no-repeat,
+    linear-gradient(#fff 0 0) 0 100% / 5px 5px no-repeat;
+  opacity: .95;
+}
+.site-brand__name { font-weight: 700; font-size: 1.22rem; color: #F8F3EA; text-shadow: 0 2px 14px rgba(11,34,38,.5); }
+.site-head__actions { display: flex; align-items: center; gap: 10px; }
+
+.lang {
+  text-decoration: none; font-weight: 600; font-size: .86rem;
+  padding: 8px 14px; border-radius: 999px;
+  color: #F8F3EA; border: 1px solid rgba(248, 243, 234, .34);
+  backdrop-filter: blur(8px); background: rgba(11, 34, 38, .22);
+}
+.lang:hover { background: rgba(248, 243, 234, .16); }
+
+/* The header floats over the dark film (light text), then travels over the light
+   detail view — where light-on-sand made the brand name invisible. site.js adds
+   .is-solid once the film has scrolled past, flipping it to a frosted light bar. */
+.site-head {
+  transition: background .3s ease, box-shadow .3s ease, border-color .3s ease;
+  border-block-end: 1px solid transparent;
+}
+.site-head.is-solid {
+  background: rgba(247, 242, 232, .88);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border-block-end-color: var(--line);
+  box-shadow: 0 6px 24px rgba(11, 34, 38, .06);
+}
+.site-head.is-solid .site-brand__name { color: var(--teal-700); text-shadow: none; }
+.site-head.is-solid .lang {
+  color: var(--teal-700); border-color: var(--line-2); background: transparent;
+}
+.site-head.is-solid .lang:hover { background: var(--sand-2); }
+
+.btn {
+  display: inline-block; text-decoration: none; font-weight: 600;
+  padding: 13px 26px; border-radius: 999px; border: 1.5px solid transparent;
+  transition: transform .2s, background .2s, box-shadow .2s;
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn--sm { padding: 9px 18px; font-size: .9rem; }
+.btn--primary { background: var(--teal-700); color: var(--white); box-shadow: 0 8px 22px rgba(14, 79, 82, .26); }
+.btn--primary:hover { background: var(--teal-600); }
+.btn--accent { background: var(--orange); color: var(--white); box-shadow: 0 8px 22px rgba(224, 114, 44, .34); }
+.btn--accent:hover { background: var(--orange-d); }
+.btn--ghostlight { color: #F8F3EA; border-color: rgba(248, 243, 234, .44); }
+.btn--ghostlight:hover { background: rgba(248, 243, 234, .12); }
+.btn--plain { color: #F8F3EA; opacity: .82; padding-inline: 8px; }
+.btn--plain:hover { opacity: 1; }
+
+/* ==========================================================================
+   3. DETAIL VIEW
+   ========================================================================== */
+
+#details, .foot { position: relative; z-index: 10; }
+#details { background: var(--sand); border-start-start-radius: 0; }
+
+.wrap { max-inline-size: var(--wrap); margin-inline: auto; padding-inline: clamp(16px, 5vw, 40px); }
+.wrap--narrow { max-inline-size: 820px; }
+
+.s { padding-block: var(--s-pad); }
+.s + .s { border-block-start: 1px solid var(--line); }
+
+/* the positioning line, lifted straight off the film into the page */
+.tagline {
+  background: var(--teal-900); color: #F8F3EA;
+  padding-block: clamp(28px, 5vh, 52px); padding-inline: clamp(16px, 5vw, 40px);
+  text-align: center;
+}
+.tagline span {
+  display: block; max-inline-size: 900px; margin-inline: auto;
+  font-size: clamp(1.05rem, 2.1vw, 1.5rem); font-weight: 500; line-height: 1.5;
+}
+
+.s-head { margin-block-end: clamp(28px, 4vh, 46px); max-inline-size: 780px; }
+.s-kicker {
+  display: block; color: var(--orange); font-weight: 700; font-size: .82rem;
+  margin-block-end: 12px;
+}
+[dir="ltr"] .s-kicker { text-transform: uppercase; letter-spacing: .14em; }
+.s-title { font-size: clamp(1.7rem, 3.5vw, 2.7rem); letter-spacing: -.01em; }
+.sub {
+  font-size: 1.05rem; color: var(--teal-600); margin-block: clamp(30px, 4vh, 44px) 16px;
+  font-weight: 600;
+}
+.lead { font-size: clamp(1rem, 1.6vw, 1.16rem); color: var(--ink-soft); max-inline-size: 68ch; margin-block-start: 14px; }
+
+.grid { display: grid; gap: var(--gap); }
+.grid--2 { grid-template-columns: repeat(2, 1fr); }
+.grid--3 { grid-template-columns: repeat(3, 1fr); }
+.grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+.card {
+  background: var(--white); border: 1px solid var(--line);
+  border-radius: var(--r); padding: clamp(20px, 2.4vw, 30px);
+  box-shadow: var(--shadow);
+  transition: transform .25s, box-shadow .25s;
+}
+.card h3 { font-size: 1.1rem; margin-block-end: 10px; }
+.card h4 { font-size: 1.02rem; margin-block-end: 8px; }
+.card p { color: var(--ink-soft); font-size: .97rem; }
+
+/* pillars */
+.pillar { position: relative; padding-block-start: 30px; }
+.pillar:hover { transform: translateY(-4px); box-shadow: var(--shadow-l); }
+/* Index sits at the inline START so it leads the heading in reading order —
+   right in Arabic, left in English — with the title padded clear of it. */
+.pillar__n {
+  position: absolute; inset-block-start: 22px; inset-inline-start: 24px;
+  font-size: .8rem; font-weight: 700; color: var(--orange);
+  font-variant-numeric: tabular-nums;
+}
+.pillar h3 { padding-inline-start: 34px; }
+
+/* steps */
+.steps { display: grid; gap: 4px; }
+.step { display: flex; gap: clamp(14px, 2vw, 24px); align-items: flex-start; padding-block: 20px; position: relative; }
+.step + .step { border-block-start: 1px solid var(--line); }
+.step__n {
+  flex: none; inline-size: 46px; block-size: 46px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 700; font-size: 1.05rem;
+  background: var(--teal-700); color: var(--white);
+  box-shadow: 0 6px 16px rgba(14, 79, 82, .24);
+}
+.step__b h3 { font-size: 1.14rem; margin-block-end: 6px; }
+.step__b p { color: var(--ink-soft); }
+
+.note {
+  margin-block-start: 26px; padding: 16px 20px;
+  background: var(--sand-2); border-radius: var(--r-s);
+  border-inline-start: 4px solid var(--orange);
+  color: var(--teal-700); font-weight: 500; font-size: .97rem;
+}
+.note--hard { background: #FBEFE4; }
+.caveat {
+  margin-block-end: 22px; font-size: .9rem; color: var(--ink-soft);
+  display: inline-block; padding: 8px 16px; border-radius: 999px;
+  background: var(--sand-2); border: 1px dashed var(--line-2);
+}
+
+/* imagery */
+.shot { margin: 0 0 clamp(22px, 3vh, 34px); border-radius: var(--r); overflow: hidden; box-shadow: var(--shadow-l); }
+.shot img { inline-size: 100%; }
+.shot--tall { margin: 0; }
+
+.split { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(24px, 4vw, 48px); align-items: start; }
+
+/* fleet */
+.veh__n { font-size: 1.16rem; }
+.veh__bar { block-size: 6px; border-radius: 999px; background: var(--sand-2); margin-block: 14px 12px; overflow: hidden; }
+.veh__bar span { display: block; block-size: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--teal-600), var(--orange)); }
+[dir="rtl"] .veh__bar span { background: linear-gradient(270deg, var(--teal-600), var(--orange)); }
+.veh__cap { display: flex; align-items: baseline; gap: 10px; margin-block-end: 14px; }
+.veh__cap strong { font-size: 1.3rem; color: var(--teal-700); font-variant-numeric: tabular-nums; }
+.veh__cap span { color: var(--ink-soft); font-size: .92rem; }
+.veh__d { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: .88rem; border-block-start: 1px solid var(--line); padding-block-start: 14px; }
+.veh__d dt { color: var(--ink-soft); }
+.veh__d dd { text-align: end; font-weight: 600; color: var(--teal-700); font-variant-numeric: tabular-nums; }
+.veh__u { margin-block-start: 14px; font-size: .92rem; color: var(--ink-soft); font-style: italic; }
+
+/* carry / cannot carry */
+.two { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--gap); }
+.panel h3 { display: flex; align-items: center; gap: 10px; font-size: 1.18rem; margin-block-end: 16px; }
+.panel ul { display: grid; gap: 10px; }
+.panel li { position: relative; padding-inline-start: 26px; font-size: .97rem; color: var(--ink); }
+.panel li::before {
+  content: ""; position: absolute; inset-inline-start: 0; inset-block-start: .55em;
+  inline-size: 8px; block-size: 8px; border-radius: 50%;
+}
+.panel--yes { border-color: rgba(18, 103, 107, .3); }
+.panel--yes li::before { background: var(--teal-600); }
+.panel--no { background: #FFFCFA; border-color: rgba(224, 114, 44, .3); }
+.panel--no li::before { background: var(--orange); }
+.tick, .cross { inline-size: 24px; block-size: 24px; border-radius: 50%; flex: none; position: relative; }
+.tick { background: rgba(18, 103, 107, .14); }
+.tick::after {
+  content: ""; position: absolute; inset-block-start: 7px; inset-inline-start: 7px;
+  inline-size: 9px; block-size: 5px;
+  border-inline-start: 2.5px solid var(--teal-600); border-block-end: 2.5px solid var(--teal-600);
+  transform: rotate(-45deg);
+}
+.cross { background: rgba(224, 114, 44, .16); }
+.cross::before, .cross::after {
+  content: ""; position: absolute; inset-block-start: 11px; inset-inline-start: 6px;
+  inline-size: 12px; block-size: 2.5px; background: var(--orange); border-radius: 2px;
+}
+.cross::before { transform: rotate(45deg); }
+.cross::after { transform: rotate(-45deg); }
+
+/* pricing */
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.chips li {
+  background: var(--white); border: 1px solid var(--line);
+  padding: 11px 18px; border-radius: 999px; font-size: .93rem; color: var(--teal-700);
+  font-weight: 500;
+}
+.fee, .pay { border-block-start: 3px solid var(--teal-600); }
+.pay { border-block-start-color: var(--orange); }
+.bounds { display: grid; gap: 12px; margin-block-start: clamp(30px, 4vh, 44px); }
+.bound {
+  background: var(--teal-900); color: #F8F3EA; border-radius: var(--r);
+  padding: 20px 26px; font-size: 1.04rem; font-weight: 500;
+  border-inline-start: 4px solid var(--orange);
+}
+
+/* tracking */
+.rows { display: grid; gap: 4px; }
+.row { padding-block: 18px; }
+.row + .row { border-block-start: 1px solid var(--line); }
+.row h3 { font-size: 1.06rem; margin-block-end: 5px; }
+.row p { color: var(--ink-soft); font-size: .97rem; }
+
+/* protection exclusions */
+.excl { margin-block-start: var(--gap); background: var(--sand-2); border-style: dashed; box-shadow: none; }
+.excl h3 { font-size: 1.02rem; margin-block-end: 12px; }
+.excl ul { display: grid; gap: 8px; }
+.excl li { position: relative; padding-inline-start: 22px; font-size: .95rem; color: var(--ink-soft); }
+.excl li::before {
+  content: ""; position: absolute; inset-inline-start: 0; inset-block-start: .62em;
+  inline-size: 10px; block-size: 2px; background: var(--line-2);
+}
+
+/* business + drivers lists */
+.ticks { display: grid; gap: 14px; }
+.ticks li { position: relative; padding-inline-start: 34px; font-size: 1.01rem; }
+.ticks li::before {
+  content: ""; position: absolute; inset-inline-start: 0; inset-block-start: .18em;
+  inline-size: 20px; block-size: 20px; border-radius: 50%;
+  background: rgba(18, 103, 107, .14);
+}
+.ticks li::after {
+  content: ""; position: absolute; inset-inline-start: 6px; inset-block-start: .48em;
+  inline-size: 8px; block-size: 4px;
+  border-inline-start: 2px solid var(--teal-600); border-block-end: 2px solid var(--teal-600);
+  transform: rotate(-45deg);
+}
+.cta-row { margin-block-start: clamp(26px, 4vh, 38px); display: flex; gap: 12px; flex-wrap: wrap; }
+
+.dark {
+  background: var(--teal-800); border-color: transparent; color: #F8F3EA;
+  padding: clamp(30px, 5vw, 60px);
+}
+.dark .s-title, .dark h3 { color: #F8F3EA; }
+.dark .s-head { margin-block-end: 26px; }
+.ticks--light li::before { background: rgba(248, 243, 234, .16); }
+.ticks--light li::after { border-color: var(--orange); }
+
+/* coverage route */
+.route { display: flex; align-items: center; gap: clamp(12px, 2.4vw, 26px); margin-block-end: 22px; flex-wrap: wrap; }
+.route__city {
+  font-weight: 700; font-size: clamp(1.1rem, 2.4vw, 1.6rem); color: var(--teal-700);
+  background: var(--white); border: 1px solid var(--line); box-shadow: var(--shadow);
+  padding: 12px 26px; border-radius: 999px;
+}
+.route__line { flex: 1 1 90px; min-inline-size: 90px; block-size: 2px; background: var(--line-2); position: relative; border-radius: 2px; }
+.route__line i {
+  position: absolute; inset-block-start: -4px; inset-inline-start: 0;
+  inline-size: 10px; block-size: 10px; border-radius: 50%; background: var(--orange);
+  animation: run 3.4s ease-in-out infinite;
+}
+@keyframes run { 0% { inset-inline-start: 0; } 50% { inset-inline-start: calc(100% - 10px); } 100% { inset-inline-start: 0; } }
+
+/* faq — native <details> so it works with zero JS */
+.faq { display: grid; gap: 10px; }
+.qa { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-s); overflow: hidden; }
+.qa summary {
+  cursor: pointer; list-style: none; display: flex; align-items: center; gap: 14px;
+  justify-content: space-between; padding: 18px 22px;
+  font-weight: 600; color: var(--teal-700); font-size: 1.02rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--sand); }
+.qa summary i {
+  flex: none; inline-size: 22px; block-size: 22px; position: relative;
+  border-radius: 50%; background: var(--sand-2); transition: background .2s, transform .25s;
+}
+.qa summary i::before, .qa summary i::after {
+  content: ""; position: absolute; background: var(--teal-600); border-radius: 2px;
+  inset-block-start: 50%; inset-inline-start: 50%; transform: translate(-50%, -50%);
+}
+.qa summary i::before { inline-size: 10px; block-size: 2px; }
+.qa summary i::after { inline-size: 2px; block-size: 10px; transition: opacity .2s; }
+.qa[open] summary i { background: var(--orange); transform: rotate(180deg); }
+.qa[open] summary i::before { background: #fff; }
+.qa[open] summary i::after { opacity: 0; }
+.qa__a { padding: 0 22px 20px; }
+.qa__a p { color: var(--ink-soft); }
+
+/* footer */
+.foot { background: var(--teal-900); color: #F8F3EA; padding-block: clamp(52px, 8vh, 92px) 34px; }
+.foot__top { display: flex; align-items: center; justify-content: space-between; gap: 26px; flex-wrap: wrap; padding-block-end: clamp(34px, 5vh, 54px); }
+.foot__h { color: #F8F3EA; font-size: clamp(1.6rem, 3.6vw, 2.6rem); max-inline-size: 22ch; }
+.foot__cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.foot__cols {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap);
+  border-block-start: 1px solid rgba(248, 243, 234, .14); padding-block: clamp(30px, 4vh, 44px);
+}
+.foot__cols h3 { color: #F8F3EA; font-size: .96rem; margin-block-end: 14px; opacity: .95; }
+.foot__cols ul { display: grid; gap: 9px; }
+.foot__cols a { color: rgba(248, 243, 234, .68); text-decoration: none; font-size: .94rem; }
+.foot__cols a:hover { color: #F8F3EA; }
+.foot__note {
+  background: rgba(248, 243, 234, .07); border-inline-start: 3px solid var(--orange);
+  padding: 14px 20px; border-radius: var(--r-s); font-size: .95rem; color: rgba(248, 243, 234, .82);
+}
+.foot__legal {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  border-block-start: 1px solid rgba(248, 243, 234, .14);
+  margin-block-start: clamp(26px, 4vh, 38px); padding-block-start: 22px;
+  font-size: .9rem; color: rgba(248, 243, 234, .6);
+}
+
+/* ==========================================================================
+   4. REVEAL — gated on .js-reveal so a no-JS visitor sees everything
+   ========================================================================== */
+.js-reveal .reveal { opacity: 0; transform: translateY(16px); }
+.js-reveal .reveal.in {
+  opacity: 1; transform: none;
+  transition: opacity .65s cubic-bezier(.22, .8, .3, 1), transform .65s cubic-bezier(.22, .8, .3, 1);
+  transition-delay: calc(var(--i, 0) * 55ms);
+}
+
+/* ==========================================================================
+   5. RESPONSIVE
+   ========================================================================== */
+@media (max-width: 980px) {
+  .grid--3, .grid--4 { grid-template-columns: repeat(2, 1fr); }
+  .split { grid-template-columns: 1fr; }
+  .split .shot--tall { order: -1; }
+}
+@media (max-width: 700px) {
+  body { font-size: 16px; }
+  .grid--2, .grid--3, .grid--4, .two, .foot__cols { grid-template-columns: 1fr; }
+  .site-brand__name { font-size: 1.08rem; }
+  .step { gap: 14px; }
+  .step__n { inline-size: 38px; block-size: 38px; font-size: .95rem; }
+  .foot__top { display: block; }
+  .foot__cta { margin-block-start: 24px; }
+  .veh__d dd { text-align: end; }
+}
+/* Very narrow: the header CTA is the first thing to cost us the brand name. */
+@media (max-width: 420px) {
+  .site-head { padding-inline: 14px; gap: 8px; }
+  .btn--sm { padding: 8px 13px; font-size: .84rem; }
+  .lang { padding: 7px 11px; font-size: .8rem; }
+}
+
+/* ==========================================================================
+   6. REDUCED MOTION — the engine already falls back to stills; kill the rest
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .js-reveal .reveal { opacity: 1; transform: none; transition: none; }
+  .route__line i { animation: none; }
+  .btn:hover, .pillar:hover { transform: none; }
+  .card { transition: none; }
+}

@@ -1,0 +1,8 @@
+{
+  "sender": true,
+  "pickup": true,
+  "fleet": true,
+  "route": true,
+  "delivery": true,
+  "finale": true
+}

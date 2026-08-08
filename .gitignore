@@ -1,0 +1,19 @@
+# Agent skill bundles vendored into the workspace — tooling, not part of the site.
+.agents/
+.claude/
+
+# Client requirement PDFs. This repo is PUBLIC — kept out on purpose.
+requirment/
+
+# QA output (tools/qa.js writes screenshot dirs)
+qa-shots/
+shots-*/
+rm.png
+
+# Build staging
+_site/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
